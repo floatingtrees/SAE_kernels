@@ -1,0 +1,12 @@
+Traceback (most recent call last):
+  File "/home/floatingtrees/projects/extension-cpp/test/sdmm_tests.py", line 53, in <module>
+    outputs = test_correctness("cuda")
+  File "/home/floatingtrees/projects/extension-cpp/test/sdmm_tests.py", line 47, in test_correctness
+    torch.testing.assert_close(result, expected)
+  File "/home/floatingtrees/projects/extension-cpp/venv/lib/python3.10/site-packages/torch/testing/_comparison.py", line 1530, in assert_close
+    raise error_metas[0].to_error(msg)
+AssertionError: Tensor-likes are not close!
+
+Mismatched elements: 96 / 96 (100.0%)
+Greatest absolute difference: 99.10400390625 at index (0, 2) (up to 1e-05 allowed)
+Greatest relative difference: inf at index (1, 0) (up to 1.3e-06 allowed)

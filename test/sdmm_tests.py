@@ -6,6 +6,10 @@ from torch import Tensor
 from typing import Tuple
 import torch.nn.functional as F
 
+torch.manual_seed(42)
+if torch.cuda.is_available():
+    torch.cuda.manual_seed(42)
+    torch.cuda.manual_seed_all(42)
 
 def reference_sdmm(a, b):
     sparse_tensor = torch.sparse_coo_tensor(a[0], a[1], (a[2], a[3]))
@@ -27,10 +31,10 @@ def sample_inputs(device, *, requires_grad=False):
 
 
     return [
-        [make_sparse_tensor((3, 10), 5), make_dense_tensor(10, 3)],
-        [make_sparse_tensor((20, 32), 32), make_dense_tensor(32, 5)],
-        [make_sparse_tensor((20, 1024), 32), make_dense_tensor(1024, 20)],
-        [make_sparse_tensor((8, 2), 0), make_dense_tensor(2, 3)],
+        [make_sparse_tensor((8, 32), 4), make_dense_tensor(32, 4)],
+        [make_sparse_tensor((64, 32), 32), make_dense_tensor(32, 4)],
+        [make_sparse_tensor((32, 1024), 32), make_dense_tensor(1024, 20)],
+        [make_sparse_tensor((20, 64), 0), make_dense_tensor(64, 80)],
     ]
 
 def test_correctness(device):
@@ -38,7 +42,14 @@ def test_correctness(device):
         for args in samples:
             result = extension_cpp.ops.sdmm(*args)
             expected = reference_sdmm(*args)
+            '''print(result)
+            print(expected)
+            print(args[0])
+            a = args[0]
+            print(torch.sparse_coo_tensor(a[0], a[1], (a[2], a[3])).to_dense())
+            print(args[1])'''
             torch.testing.assert_close(result, expected)
+            
             print(torch.allclose(result, expected))
 
 

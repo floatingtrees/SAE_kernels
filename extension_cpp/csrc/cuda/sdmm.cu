@@ -9,27 +9,32 @@ namespace extension_cpp
   __global__ void sdmm_kernel(const int64_t *index_ptr, const float *values_ptr, int64_t m, int64_t n, int64_t p, const float *dense_ptr, float *result_ptr, int64_t num_sparse_indices)
   {
     int index_number = blockIdx.x * blockDim.y + threadIdx.y; // all with the same x thread index operate on the same element
-    int column_index = index_ptr[index_number];
-    int row_index = index_ptr[index_number + num_sparse_indices];
+    int column_index = index_ptr[index_number + num_sparse_indices];
+    int row_index = index_ptr[index_number];
     float sparse_value = values_ptr[index_number];
 
-    int result_row_base = row_index * m;
-    int dense_row_base = column_index * n;
+    int result_row_base = row_index * p;
+    int dense_row_base = column_index * p;
 
     for (int i = 0; i < p; i += blockDim.x)
     {
-      atomicAdd(&result_ptr[result_row_base + i + threadIdx.x], sparse_value * dense_ptr[dense_row_base + i]);
+      atomicAdd(&result_ptr[result_row_base + i + threadIdx.x], sparse_value * dense_ptr[dense_row_base + i + threadIdx.x]);
+      if (threadIdx.x == 1)
+      {
+        printf("Row: %d, Column: %d, Value: %f, Write index:, %d, Dense read location: %d, Dense read value %f\n", row_index, column_index, sparse_value, result_row_base + i + threadIdx.x, dense_row_base + i + threadIdx.x, dense_ptr[dense_row_base + i + threadIdx.x]);
+      }
     }
 
     // choose sparse element to matmul with
   }
 
-  at::Tensor sdmm_cuda(at::Tensor &indices, at::Tensor &values, int64_t m, int64_t n, at::Tensor &dense_tensor)
+  at::Tensor sdmm_cuda(const at::Tensor &indices, const at::Tensor &values, int64_t m, int64_t n, const at::Tensor &dense_tensor)
   {
+
     TORCH_CHECK(values.dtype() == at::kFloat);
     TORCH_CHECK(dense_tensor.dtype() == at::kFloat);
     TORCH_CHECK(indices.dtype() == at::kLong);
-    int64_t num_sparse_indices = values.sizes()[1];
+    int64_t num_sparse_indices = values.sizes()[0];
     TORCH_CHECK(!dense_tensor.is_sparse());
     TORCH_INTERNAL_ASSERT(indices.device().type() == at::DeviceType::CUDA);
     TORCH_INTERNAL_ASSERT(values.device().type() == at::DeviceType::CUDA);
@@ -50,11 +55,12 @@ namespace extension_cpp
     const float *dense_ptr = dense_contig.data_ptr<float>();
     const int64_t *index_ptr = indices_contig.data_ptr<int64_t>();
     float *result_ptr = result_tensor.data_ptr<float>();
-    int threads_per_element = 1;
-    dim3 block_size = dim3(threads_per_element, 1);
-    int num_blocks = num_sparse_indices;
-    sdmm_kernel<<<num_blocks, block_size>>>(index_ptr, values_ptr, m, n, p, dense_ptr, result_ptr, num_sparse_indices);
+    int threads_per_element = 4;
+    dim3 block_size = dim3(threads_per_element, 32);
+    int num_blocks = (num_sparse_indices + 1023) / 1024;
 
+    sdmm_kernel<<<num_blocks, block_size>>>(index_ptr, values_ptr, m, n, p, dense_ptr, result_ptr, num_sparse_indices);
+    cudaDeviceSynchronize();
     return result_tensor;
   }
 

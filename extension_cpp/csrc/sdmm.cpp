@@ -5,7 +5,7 @@
 namespace extension_cpp
 {
 
-  at::Tensor sdmm_cpu(at::Tensor &indices, at::Tensor &values, int64_t m, int64_t n, at::Tensor &dense_tensor)
+  at::Tensor sdmm_cpu(const at::Tensor &indices, const at::Tensor &values, const int64_t m, const int64_t n, const at::Tensor &dense_tensor)
   {
     TORCH_CHECK(n == dense_tensor.sizes()[0]);
     TORCH_CHECK(values.dtype() == at::kFloat);

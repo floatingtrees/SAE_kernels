@@ -9,7 +9,6 @@ namespace extension_cpp
   {
     TORCH_CHECK(n == dense_tensor.sizes()[0]);
     TORCH_CHECK(values.dtype() == at::kFloat);
-    std::cout << "HERE" << indices.dtype() << std::endl;
     TORCH_CHECK(indices.dtype() == at::kLong);
     TORCH_CHECK(dense_tensor.dtype() == at::kFloat);
     TORCH_INTERNAL_ASSERT(indices.device().type() == at::DeviceType::CPU);

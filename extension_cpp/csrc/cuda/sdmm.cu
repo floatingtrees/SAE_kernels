@@ -6,11 +6,22 @@
 namespace extension_cpp
 {
 
-  __global__ void sdmm_kernel(int numel, const float *a, const float *b, float c, float *result)
+  __global__ void sdmm_kernel(const int64_t *index_ptr, const float *values_ptr, int64_t m, int64_t n, int64_t p, const float *dense_ptr, float *result_ptr, int64_t num_sparse_indices)
   {
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    if (idx < numel)
-      result[idx] = a[idx] * b[idx] + c;
+    int index_number = blockIdx.x * blockDim.y + threadIdx.y; // all with the same x thread index operate on the same element
+    int column_index = index_ptr[index_number];
+    int row_index = index_ptr[index_number + num_sparse_indices];
+    float sparse_value = values_ptr[index_number];
+
+    int result_row_base = row_index * m;
+    int dense_row_base = column_index * n;
+
+    for (int i = 0; i < p; i += blockDim.x)
+    {
+      atomicAdd(&result_ptr[result_row_base + i + threadIdx.x], sparse_value * dense_ptr[dense_row_base + i]);
+    }
+
+    // choose sparse element to matmul with
   }
 
   at::Tensor sdmm_cuda(at::Tensor &indices, at::Tensor &values, int64_t m, int64_t n, at::Tensor &dense_tensor)
@@ -18,6 +29,7 @@ namespace extension_cpp
     TORCH_CHECK(values.dtype() == at::kFloat);
     TORCH_CHECK(dense_tensor.dtype() == at::kFloat);
     TORCH_CHECK(indices.dtype() == at::kLong);
+    int64_t num_sparse_indices = values.sizes()[1];
     TORCH_CHECK(!dense_tensor.is_sparse());
     TORCH_INTERNAL_ASSERT(indices.device().type() == at::DeviceType::CUDA);
     TORCH_INTERNAL_ASSERT(values.device().type() == at::DeviceType::CUDA);
@@ -30,12 +42,18 @@ namespace extension_cpp
     at::Tensor values_contig = values.contiguous();
     at::Tensor dense_contig = dense_tensor.contiguous();
 
+    double sparsity_percentage = (double)num_sparse_indices / (double)dense_tensor.numel();
+    // assign
+
     at::Tensor result_tensor = torch::empty({m, p}, dense_contig.options());
     const float *values_ptr = values_contig.data_ptr<float>();
     const float *dense_ptr = dense_contig.data_ptr<float>();
-    const int *index_ptr = indices_contig.data_ptr<int>();
+    const int64_t *index_ptr = indices_contig.data_ptr<int64_t>();
     float *result_ptr = result_tensor.data_ptr<float>();
-    int numel = result_tensor.numel();
+    int threads_per_element = 1;
+    dim3 block_size = dim3(threads_per_element, 1);
+    int num_blocks = num_sparse_indices;
+    sdmm_kernel<<<num_blocks, block_size>>>(index_ptr, values_ptr, m, n, p, dense_ptr, result_ptr, num_sparse_indices);
 
     return result_tensor;
   }

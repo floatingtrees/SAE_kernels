@@ -8,8 +8,8 @@ import torch.nn.functional as F
 
 
 def reference_sdmm(a, b):
-    
-    return torch.matmul(a, b)
+    sparse_tensor = torch.sparse_coo_tensor(a[0], a[1], (a[2], a[3]))
+    return torch.matmul(sparse_tensor, b)
 
 def sample_inputs(device, *, requires_grad=False):
     def make_sparse_tensor(size, k_sparsity):
@@ -39,7 +39,8 @@ def test_correctness(device):
             result = extension_cpp.ops.sdmm(*args)
             expected = reference_sdmm(*args)
             torch.testing.assert_close(result, expected)
+            print(torch.allclose(result, expected))
 
 
 
-outputs = test_correctness("cpu")
+outputs = test_correctness("cuda")

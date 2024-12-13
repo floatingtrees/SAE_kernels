@@ -9,8 +9,10 @@ __all__ = ["sdmm"]
 def sdmm(sparse_tensor: Tuple[Tensor, Tensor, int, int], dense_tensor: Tensor) -> Tensor:
     """Performs a * b + c in an efficient fused kernel"""
     indices, values, m, n = sparse_tensor
-    #if dense_tensor.shape[1] % 32 != 0:
-    #    raise ValueError("Unable to efficiently implement matmul on CUDA")
+    if values.numel() == 0:
+        return torch.zeros((m, dense_tensor.shape[-1]), device = dense_tensor.device, dtype = dense_tensor.dtype)
+    '''if dense_tensor.shape[1] % 32 != 0:
+        raise ValueError("Unable to efficiently implement matmul on CUDA")'''
     return torch.ops.extension_cpp.sdmm(indices, values, m, n, dense_tensor)
 
 

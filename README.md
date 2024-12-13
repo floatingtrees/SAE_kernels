@@ -17,11 +17,9 @@ To test:
 python test/test_extension.py
 ```
 
-To benchmark Python vs. C++ vs. CUDA:
+To benchmark Pytorch default vs CUDA:
 ```
-python test/benchmark.py
+python sdmm_tests/benchmark.py
 ```
 
-## Authors
-
-[Peter Goldsborough](https://github.com/goldsborough), [Richard Zou](https://github.com/zou3519)
+Forked from pytorch CUDA implementation reference

@@ -65,6 +65,7 @@ def speed_test(): # 10 times faster naively
     result = extension_cpp.ops.sdmm(sparse, dense)
     expected = reference_sdmm(sparse, dense)
     torch.testing.assert_close(result, expected, atol = 1e-4, rtol = 1e-4)
+    print("Correctness tasks passed")
     custom_start = perf_counter()
     for i in range(100):
         extension_cpp.ops.sdmm(sparse, dense)

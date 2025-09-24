@@ -22,9 +22,10 @@ python test/sdmm_tests.py
 On an RTX 4090, you should see: 
 
 ```
-Custom kernel time:  0.021685993298888206
-Default torch sparse matmul time:  0.061105010099709034
-Custom kernel is 2.818 times faster
+Correctness tasks passed
+Custom kernel time:  0.021691498812288046
+Default torch sparse matmul time:  0.061094685923308134
+Custom kernel is 2.817 times faster
 ```
 
 Forked from pytorch CUDA implementation reference

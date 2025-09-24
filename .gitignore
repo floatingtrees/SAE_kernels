@@ -60,3 +60,4 @@ test/data/linear.pt
 compile_commands.json
 *.egg-info/
 venv/
+venv2/

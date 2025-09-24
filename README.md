@@ -1,25 +1,23 @@
-# C++/CUDA Extensions in PyTorch
+# Sparse Dense Multiplication Kernel for Sparse Autoencoders
 
-An example of writing a C++/CUDA extension for PyTorch. See
-[here](https://pytorch.org/tutorials/advanced/cpp_custom_ops.html) for the accompanying tutorial.
-This repo demonstrates how to write an example `extension_cpp.ops.mymuladd`
-custom op that has both custom CPU and CUDA kernels.
+Code skeleton from https://pytorch.org/tutorials/advanced/cpp_custom_ops.html
 
-The examples in this repo work with PyTorch 2.4+.
+Sparse Autoencoders have very few nonzero elements in each dimension, and we know precisely how many nonzero elements there will be along each axis. Thus, they can benefit from kernels beyond the default kernels provided by torch sparse. 
+
+
 
 To build:
 ```
-pip install .
+pip install torch==2.5.0 numpy==2.0.2
+python -m pip install -U pip setuptools wheel
+pip install expecttest
+pip install --no-build-isolation -e .
 ```
 
-To test:
-```
-python test/test_extension.py
-```
 
-To benchmark Pytorch default vs CUDA:
+To benchmark Pytorch sparse default vs CUDA:
 ```
-python sdmm_tests/benchmark.py
+python test/sdmm_tests.py
 ```
 
 Forked from pytorch CUDA implementation reference

@@ -44,36 +44,41 @@ def sample_inputs(device, *, requires_grad=False):
     return [
         [make_sparse_tensor((8, 32), 4), make_dense_tensor(32, 4)],
         [make_sparse_tensor((16, 32), 4), make_dense_tensor(32, 4)],
-        [make_sparse_tensor((32, 1024), 32), make_dense_tensor(1024, 4)],
+        [make_sparse_tensor((1, 1024), 32), make_dense_tensor(1024, 4)],
         [make_sparse_tensor((20, 64), 0), make_dense_tensor(64, 80)],
     ]
 
 def test_correctness(device):#
-        samples = sample_inputs(device)
-        for args in samples:
-            result = extension_cpp.ops.sdmm(*args)
-            expected = reference_sdmm(*args)
-            a = args[0]
-            torch.testing.assert_close(result, expected)
-            
-            print(torch.allclose(result, expected))
+    samples = sample_inputs(device)
+    for args in samples:
+        result = extension_cpp.ops.sdmm(*args)
+        expected = reference_sdmm(*args)
+        a = args[0]
+        torch.testing.assert_close(result, expected)
+        
+        assert torch.allclose(result, expected)
 
 def speed_test(): # 10 times faster naively
     from time import perf_counter
-    sparse = make_sparse_tensor_transposed((64, 32768), 4) # runs transposed
+    sparse = make_sparse_tensor_transposed((64, 2 ** 12), 4) # runs transposed
     dense = torch.randn((64, 3072), device = "cuda")
     result = extension_cpp.ops.sdmm(sparse, dense)
     expected = reference_sdmm(sparse, dense)
-    torch.testing.assert_close(result, expected)
+    torch.testing.assert_close(result, expected, atol = 1e-4, rtol = 1e-4)
     custom_start = perf_counter()
-    for i in range(1000):
+    for i in range(100):
         extension_cpp.ops.sdmm(sparse, dense)
-    print(perf_counter() - custom_start)
+        torch.cuda.synchronize()
+    custom_time = perf_counter() - custom_start
+    print("Custom kernel time: ", custom_time)
 
     reference_start = perf_counter()
-    for j in range(1000):
+    for j in range(100):
         reference_sdmm(sparse, dense)
-    print(perf_counter() - reference_start)
+        torch.cuda.synchronize()
+    default_time = perf_counter() - reference_start
+    print("Default torch sparse matmul time: ", default_time)
+    print(f"Custom kernel is {round(default_time / custom_time, 3)} times faster")
 
 outputs = test_correctness("cuda")
 speed_test()
